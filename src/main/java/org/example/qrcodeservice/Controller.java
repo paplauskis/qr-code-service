@@ -1,5 +1,9 @@
 package org.example.qrcodeservice;
 
+import org.example.qrcodeservice.exception.ContentsEmptyException;
+import org.example.qrcodeservice.exception.WrongCorrectionLevelException;
+import org.example.qrcodeservice.exception.WrongImageSizeException;
+import org.example.qrcodeservice.exception.WrongImageTypeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +35,9 @@ public class Controller {
     }
 
     static final Set<String> SUPPORT_FORMATS = Set.of("png", "jpeg", "gif");
+
+    static final Set<String> CORRECTION_LEVELS = Set.of("L", "M", "Q", "H");
+
     static final Map<String, MediaType> MEDIA_TYPES = Map.of(
             "png", MediaType.IMAGE_PNG,
             "jpeg", MediaType.IMAGE_JPEG,
@@ -45,28 +52,19 @@ public class Controller {
             @RequestParam(value = "correction", defaultValue = "L") String correctionLevel) {
 
         if (contents.isEmpty() || contents.isBlank()) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", "Contents cannot be null or blank"));
+            throw new ContentsEmptyException("Contents cannot be null or blank");
         }
 
         if (size < 150 || size > 350) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", "Image size must be between 150 and 350 pixels"));
+            throw new WrongImageSizeException("Image size must be between 150 and 350 pixels");
         }
 
-        if (!correctionLevel.equals("L") && !correctionLevel.equals("M") &&
-                !correctionLevel.equals("Q") && !correctionLevel.equals("H")) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", "Permitted error correction levels are L, M, Q, H"));
+        if (!CORRECTION_LEVELS.contains(correctionLevel)) {
+            throw new WrongCorrectionLevelException("Permitted error correction levels are L, M, Q, H");
         }
 
         if (!SUPPORT_FORMATS.contains(type)) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", "Only png, jpeg and gif image types are supported"));
+            throw new WrongImageTypeException("Only png, jpeg and gif image types are supported");
         }
 
         BufferedImage qrCode = qrCodeService.getQrCode(contents, size, correctionLevel);
